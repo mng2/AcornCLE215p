@@ -9,7 +9,7 @@ use UNISIM.VComponents.all;
 entity top is
     Port ( CLK200_P : in STD_LOGIC;
            CLK200_N : in STD_LOGIC;
-           LEDs     : out STD_LOGIC_VECTOR (4 downto 1));
+           LEDs_N   : out STD_LOGIC_VECTOR (4 downto 1));
 end top;
 
 architecture Behavioral of top is
@@ -45,7 +45,7 @@ begin
             if slowflag = '1' then
                 countslow  <= countslow + 1;
             end if;
-            LEDs <= std_logic_vector(countslow);
+            LEDs_N <= not std_logic_vector(countslow);
         end if;
     end process;
 
