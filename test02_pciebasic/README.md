@@ -52,6 +52,48 @@ This project was developed in Vivado 2019.2, but will probably work in other ver
 To reconstitute the project, use the Vivado TCL console to navigate to this directory, then `source ./proj_pciebasic.tcl`.
 
 ## Trying It Out
+I have my Acorn connected to an old computer of mine, running Lubuntu 20.04.
+If your computer is one that doesn't cut the power when rebooting,
+then I suggest programming the FPGA directly, then rebooting.
+Otherwise you'll have to write the new bitfile to the Flash
+and take your chances as to whether your system enforces the 100ms boot time requirement.
+
+Anyway, once your system is up, run `lspci -tv`. This is what I get:
+```
+-[0000:00]-+-00.0  NVIDIA Corporation CK804 Memory Controller
+           +-01.0  NVIDIA Corporation CK804 ISA Bridge
+           +-01.1  NVIDIA Corporation CK804 SMBus
+           +-02.0  NVIDIA Corporation CK804 USB Controller
+           +-02.1  NVIDIA Corporation CK804 USB Controller
+           +-06.0  NVIDIA Corporation CK804 IDE
+           +-07.0  NVIDIA Corporation CK804 Serial ATA Controller
+           +-08.0  NVIDIA Corporation CK804 Serial ATA Controller
+           +-09.0-[05]--+-06.0  VIA Technologies Inc. VT1720/24 [Envy24PT/HT] PCI Multi-Channel Audio Controller
+           |            \-07.0  VIA Technologies, Inc. VT6306/7/8 [Fire II(M)] IEEE 1394 OHCI Controller
+           +-0a.0  NVIDIA Corporation CK804 Ethernet Controller
+           +-0b.0-[04]--
+           +-0c.0-[03]--
+           +-0d.0-[02]--+-00.0  Advanced Micro Devices, Inc. [AMD/ATI] RV516 GL [FireMV 2250]
+           |            \-00.1  Advanced Micro Devices, Inc. [AMD/ATI] RV516 GL [FireMV 2250] (Secondary)
+           +-0e.0-[01]----00.0  Device 1234:abcd
+           +-18.0  Advanced Micro Devices, Inc. [AMD] K8 [Athlon64/Opteron] HyperTransport Technology Configuration
+           +-18.1  Advanced Micro Devices, Inc. [AMD] K8 [Athlon64/Opteron] Address Map
+           +-18.2  Advanced Micro Devices, Inc. [AMD] K8 [Athlon64/Opteron] DRAM Controller
+           \-18.3  Advanced Micro Devices, Inc. [AMD] K8 [Athlon64/Opteron] Miscellaneous Control
+```
+See that `Device 1234:abcd`? That means it worked, whew.
+This particular format for `lspci` shows the tree structure, which one will
+need to know about when the time comes to access the device.
+
+Now do a `lspci -vvnn`. Sort through the output and find the relevant entry:
+```
+01:00.0 Memory controller [0580]: Device [1234:abcd]
+	Subsystem: Device [1234:4321]
+	{...}
+	Region 0: Memory at d0000000 (32-bit, non-prefetchable) [size=16K]
+```
+This tells us that despite lacking a driver, the kernel went ahead and mapped BAR0 somewhere.
+
 
 ## Gory Details
 * GT lane order: The Xilinx IPs have a preferred lane order for the gigabit transceivers,
