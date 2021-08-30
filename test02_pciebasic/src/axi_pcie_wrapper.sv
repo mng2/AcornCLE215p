@@ -10,7 +10,8 @@ module axi_pcie_wrapper #()
     AXI.M           m_axi_pcie,
     output          axi_clk_pcie,
     input           sys_resetn,
-    output          mmcm_lock
+    output          mmcm_lock,
+    output          link_up
 );
 
     // GT clock buffer for PCIe
@@ -29,7 +30,7 @@ module axi_pcie_wrapper #()
     
     axi_pcie_x4g2 axi_pcie_inst (
       .axi_aresetn(     sys_resetn),              // input wire axi_aresetn
-      .user_link_up(    user_link_up),            // output wire user_link_up
+      .user_link_up(    link_up),            // output wire user_link_up
       .axi_aclk_out(    axi_clk_pcie),            // output wire axi_aclk_out
       .axi_ctl_aclk_out(axi_ctl_aclk_out),    // output wire axi_ctl_aclk_out
       .mmcm_lock(       mmcm_lock),                  // output wire mmcm_lock

@@ -9,13 +9,15 @@ module axi_pcie_example_top
     input           REFCLKp,
     input           REFCLKn,
     input           PERSTn,
+    output          CLKREQn,
     output  [4:1]   LEDn,
-    output          M2_LED
+    output          M2_LEDn
 );
 
     logic           axi_clk_pcie;
     logic           sys_resetn;
     logic           mmcm_lock;
+    logic           link_up;
 
     // AXI bus originating from PCIe AXI core
     // 128b data, 32b address
@@ -36,8 +38,11 @@ module axi_pcie_example_top
         .m_axi_pcie,
         .axi_clk_pcie,
         .sys_resetn,
-        .mmcm_lock
+        .mmcm_lock,
+        .link_up
     );
+    assign M2_LEDn = ~link_up;
+    assign CLKREQn = 1'b0; //always request clock
 
     AXI #(.DW(32)) 
     m_axi_pcie32( 
