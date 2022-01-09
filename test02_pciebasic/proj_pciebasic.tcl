@@ -95,30 +95,17 @@ set proj_dir [get_property directory [current_project]]
 # Set project properties
 set obj [current_project]
 set_property -name "default_lib" -value "xil_defaultlib" -objects $obj
-set_property -name "dsa.accelerator_binary_content" -value "bitstream" -objects $obj
-set_property -name "dsa.accelerator_binary_format" -value "xclbin2" -objects $obj
-set_property -name "dsa.description" -value "Vivado generated DSA" -objects $obj
-set_property -name "dsa.dr_bd_base_address" -value "0" -objects $obj
-set_property -name "dsa.emu_dir" -value "emu" -objects $obj
-set_property -name "dsa.flash_interface_type" -value "bpix16" -objects $obj
-set_property -name "dsa.flash_offset_address" -value "0" -objects $obj
-set_property -name "dsa.flash_size" -value "1024" -objects $obj
-set_property -name "dsa.host_architecture" -value "x86_64" -objects $obj
-set_property -name "dsa.host_interface" -value "pcie" -objects $obj
-set_property -name "dsa.num_compute_units" -value "60" -objects $obj
-set_property -name "dsa.platform_state" -value "pre_synth" -objects $obj
-set_property -name "dsa.uses_pr" -value "1" -objects $obj
-set_property -name "dsa.vendor" -value "xilinx" -objects $obj
-set_property -name "dsa.version" -value "0.0" -objects $obj
 set_property -name "enable_vhdl_2008" -value "1" -objects $obj
 set_property -name "ip_cache_permissions" -value "read write" -objects $obj
 set_property -name "ip_output_repo" -value "$proj_dir/${_xil_proj_name_}.cache/ip" -objects $obj
 set_property -name "mem.enable_memory_map_generation" -value "1" -objects $obj
 set_property -name "part" -value "xc7a200tfbg484-3" -objects $obj
+set_property -name "platform.description" -value "Vivado generated DSA" -objects $obj
+set_property -name "platform.uses_pr" -value "1" -objects $obj
 set_property -name "sim.central_dir" -value "$proj_dir/${_xil_proj_name_}.ip_user_files" -objects $obj
 set_property -name "sim.ip.auto_export_scripts" -value "1" -objects $obj
 set_property -name "simulator_language" -value "Mixed" -objects $obj
-set_property -name "target_language" -value "VHDL" -objects $obj
+set_property -name "xpm_libraries" -value "XPM_CDC XPM_FIFO XPM_MEMORY" -objects $obj
 
 # Create 'sources_1' fileset (if not found)
 if {[string equal [get_filesets -quiet sources_1] ""]} {
@@ -133,24 +120,25 @@ if {[string equal [get_filesets -quiet sources_1] ""]} {
 
 # Set 'sources_1' fileset object
 set obj [get_filesets sources_1]
-# Add local files from the original project (-no_copy_sources specified)
 set files [list \
- [file normalize "${origin_dir}/src/top_pciebasic.vhd" ]\
+ [file normalize "${origin_dir}/src/axi_pcie_wrapper.sv"] \
+ [file normalize "${origin_dir}/src/axi_to_axilite_wrapper.sv"] \
+ [file normalize "${origin_dir}/src/axilite_gpio_wrapper.sv"] \
+ [file normalize "${origin_dir}/src/interface_axi.sv"] \
+ [file normalize "${origin_dir}/src/width_change_wrapper.sv"] \
+ [file normalize "${origin_dir}/src/axi_pcie_example_top.sv"] \
 ]
-set added_files [add_files -fileset sources_1 $files]
+add_files -norecurse -fileset $obj $files
 
 # Set 'sources_1' fileset file properties for remote files
 # None
 
 # Set 'sources_1' fileset file properties for local files
-set file "top_pciebasic.vhd"
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "VHDL" -objects $file_obj
-
 
 # Set 'sources_1' fileset properties
 set obj [get_filesets sources_1]
-set_property -name "top" -value "top" -objects $obj
+set_property -name "top" -value "axi_pcie_example_top" -objects $obj
+set_property -name "top_auto_set" -value "0" -objects $obj
 
 # Create 'constrs_1' fileset (if not found)
 if {[string equal [get_filesets -quiet constrs_1] ""]} {
@@ -202,15 +190,15 @@ set obj [get_filesets sim_1]
 
 # Set 'sim_1' fileset properties
 set obj [get_filesets sim_1]
-set_property -name "top" -value "top" -objects $obj
+set_property -name "top" -value "axi_pcie_example_top" -objects $obj
 set_property -name "top_lib" -value "xil_defaultlib" -objects $obj
 
 # Create 'synth_1' run (if not found)
 if {[string equal [get_runs -quiet synth_1] ""]} {
-    create_run -name synth_1 -part xc7a200tfbg484-3 -flow {Vivado Synthesis 2018} -strategy "Vivado Synthesis Defaults" -report_strategy {No Reports} -constrset constrs_1
+    create_run -name synth_1 -part xc7a200tfbg484-3 -flow {Vivado Synthesis 2019} -strategy "Vivado Synthesis Defaults" -report_strategy {No Reports} -constrset constrs_1
 } else {
   set_property strategy "Vivado Synthesis Defaults" [get_runs synth_1]
-  set_property flow "Vivado Synthesis 2018" [get_runs synth_1]
+  set_property flow "Vivado Synthesis 2019" [get_runs synth_1]
 }
 set obj [get_runs synth_1]
 set_property set_report_strategy_name 1 $obj
@@ -233,10 +221,10 @@ current_run -synthesis [get_runs synth_1]
 
 # Create 'impl_1' run (if not found)
 if {[string equal [get_runs -quiet impl_1] ""]} {
-    create_run -name impl_1 -part xc7a200tfbg484-3 -flow {Vivado Implementation 2018} -strategy "Vivado Implementation Defaults" -report_strategy {No Reports} -constrset constrs_1 -parent_run synth_1
+    create_run -name impl_1 -part xc7a200tfbg484-3 -flow {Vivado Implementation 2019} -strategy "Performance_ExtraTimingOpt" -report_strategy {No Reports} -constrset constrs_1 -parent_run synth_1
 } else {
-  set_property strategy "Vivado Implementation Defaults" [get_runs impl_1]
-  set_property flow "Vivado Implementation 2018" [get_runs impl_1]
+  set_property strategy "Performance_ExtraTimingOpt" [get_runs impl_1]
+  set_property flow "Vivado Implementation 2019" [get_runs impl_1]
 }
 set obj [get_runs impl_1]
 set_property set_report_strategy_name 1 $obj
@@ -427,9 +415,12 @@ if { $obj != "" } {
 
 }
 set obj [get_runs impl_1]
-set_property -name "needs_refresh" -value "1" -objects $obj
 set_property -name "part" -value "xc7a200tfbg484-3" -objects $obj
-set_property -name "strategy" -value "Vivado Implementation Defaults" -objects $obj
+set_property -name "strategy" -value "Performance_ExtraTimingOpt" -objects $obj
+set_property -name "steps.place_design.args.directive" -value "ExtraTimingOpt" -objects $obj
+set_property -name "steps.phys_opt_design.is_enabled" -value "1" -objects $obj
+set_property -name "steps.phys_opt_design.args.directive" -value "Explore" -objects $obj
+set_property -name "steps.route_design.args.directive" -value "NoTimingRelaxation" -objects $obj
 set_property -name "steps.write_bitstream.args.bin_file" -value "1" -objects $obj
 set_property -name "steps.write_bitstream.args.readback_file" -value "0" -objects $obj
 set_property -name "steps.write_bitstream.args.verbose" -value "0" -objects $obj
@@ -441,35 +432,60 @@ puts "INFO: Project created:${_xil_proj_name_}"
 
 # generate ip
 
-create_ip -name pcie_7x -vendor xilinx.com -library ip -module_name pcie_x4g2 
-set_property -dict [list CONFIG.Maximum_Link_Width {X4} CONFIG.Link_Speed {5.0_GT/s}\
- CONFIG.Interface_Width {64_bit} CONFIG.User_Clk_Freq {250} CONFIG.Device_ID {7024}\
- CONFIG.Max_Payload_Size {512_bytes} CONFIG.Trgt_Link_Speed {4'h2} CONFIG.PCIe_Blk_Locn {X0Y0}\
- CONFIG.Trans_Buf_Pipeline {None} CONFIG.Ref_Clk_Freq {100_MHz}] [get_ips pcie_x4g2]
-set pcieloc $proj_dir/$_xil_proj_name_.srcs/sources_1/ip/pcie_x4g2
-generate_target all [get_files $pcieloc/pcie_x4g2.xci]
-export_ip_user_files -of_objects [get_files $pcieloc/pcie_x4g2.xci] -no_script -sync -force -quiet
-create_ip_run [get_files -of_objects [get_fileset sources_1] $pcieloc/pcie_x4g2.xci]
-set_property IS_MANAGED false [get_files $pcieloc/pcie_x4g2.xci]
-# we need to edit /ip/pcie_x4g2/source/pcie_x4g2-PCIE_X0Y0.xdc
+create_ip -name axi_pcie -vendor xilinx.com -library ip -module_name axi_pcie_x4g2
+set_property -dict [list CONFIG.Component_Name {axi_pcie_x4g2}\
+ CONFIG.NO_OF_LANES {X4} CONFIG.MAX_LINK_SPEED {5.0_GT/s}\
+ CONFIG.VENDOR_ID {0x1234} CONFIG.DEVICE_ID {0xABCD}\
+ CONFIG.SUBSYSTEM_VENDOR_ID {0x1234} CONFIG.SUBSYSTEM_ID {0x4321}\
+ CONFIG.shared_logic_in_core {false}\
+ CONFIG.S_AXI_DATA_WIDTH {128} CONFIG.M_AXI_DATA_WIDTH {128}] [get_ips axi_pcie_x4g2]
+set pcieloc $proj_dir/$_xil_proj_name_.srcs/sources_1/ip/axi_pcie_x4g2
+generate_target all [get_files $pcieloc/axi_pcie_x4g2.xci]
+export_ip_user_files -of_objects [get_files $pcieloc/axi_pcie_x4g2.xci] -no_script -sync -force -quiet
+create_ip_run [get_files -of_objects [get_fileset sources_1] $pcieloc/axi_pcie_x4g2.xci]
+set_property strategy Flow_PerfOptimized_high [get_runs axi_pcie_x4g2_synth_1]
+set_property IS_MANAGED false [get_files $pcieloc/axi_pcie_x4g2.xci]
+# we need to edit /ip/axi_pcie_x4g2/axi_pcie_x4g2/source/axi_pcie_X0Y0.xdc
 # to set the correct lane mapping
 # hacky find/replace from https://stackoverflow.com/questions/36874745/tcl-replace-string-in-file
-cd $pcieloc/source
-set fd [open "pcie_x4g2-PCIE_X0Y0.xdc" r]
+cd $pcieloc/axi_pcie_x4g2/source
+set fd [open "axi_pcie_X0Y0.xdc" r]
 set newfd [open "temp.tmp" w]
 while {[gets $fd line] >= 0} {
     set newline0 [string map {GTPE2_CHANNEL_X0Y7 SYMBOL_LANE0} $line]
     set newline1 [string map {GTPE2_CHANNEL_X0Y6 SYMBOL_LANE1} $newline0]
     set newline2 [string map {GTPE2_CHANNEL_X0Y5 SYMBOL_LANE2} $newline1]
     set newline3 [string map {GTPE2_CHANNEL_X0Y4 SYMBOL_LANE3} $newline2]
-    set newline4 [string map {SYMBOL_LANE0 GTPE2_CHANNEL_X0Y5} $newline3]
-    set newline5 [string map {SYMBOL_LANE1 GTPE2_CHANNEL_X0Y7} $newline4]
-    set newline6 [string map {SYMBOL_LANE2 GTPE2_CHANNEL_X0Y6} $newline5]
-    set newline7 [string map {SYMBOL_LANE3 GTPE2_CHANNEL_X0Y4} $newline6]
+    set newline4 [string map {SYMBOL_LANE0 GTPE2_CHANNEL_X0Y6} $newline3]
+    set newline5 [string map {SYMBOL_LANE1 GTPE2_CHANNEL_X0Y4} $newline4]
+    set newline6 [string map {SYMBOL_LANE2 GTPE2_CHANNEL_X0Y5} $newline5]
+    set newline7 [string map {SYMBOL_LANE3 GTPE2_CHANNEL_X0Y7} $newline6]
     puts $newfd $newline7
 }
 close $fd
 close $newfd
-file rename -force "temp.tmp" "pcie_x4g2-PCIE_X0Y0.xdc"
+file rename -force "temp.tmp" "axi_pcie_X0Y0.xdc"
 cd $proj_dir/..
 
+create_ip -name axi_dwidth_converter -vendor xilinx.com -library ip -module_name axi_dwconv_128_32
+set_property -dict [list CONFIG.Component_Name {axi_dwconv_128_32}\
+ CONFIG.SI_DATA_WIDTH {128} CONFIG.MI_DATA_WIDTH {32}\
+ CONFIG.SI_ID_WIDTH {0}] [get_ips axi_dwconv_128_32]
+set iploc $proj_dir/$_xil_proj_name_.srcs/sources_1/ip/axi_dwconv_128_32
+generate_target all [get_files $iploc/axi_dwconv_128_32.xci]
+export_ip_user_files -of_objects [get_files $iploc/axi_dwconv_128_32.xci] -no_script -sync -force -quiet
+create_ip_run [get_files -of_objects [get_fileset sources_1] $iploc/axi_dwconv_128_32.xci]
+
+create_ip -name axi_protocol_converter -vendor xilinx.com -library ip -module_name axi_to_axilite
+set_property -dict [list CONFIG.Component_Name {axi_to_axilite}] [get_ips axi_to_axilite]
+set iploc $proj_dir/$_xil_proj_name_.srcs/sources_1/ip/axi_to_axilite
+generate_target all [get_files $iploc/axi_to_axilite.xci]
+export_ip_user_files -of_objects [get_files $iploc/axi_to_axilite.xci] -no_script -sync -force -quiet
+create_ip_run [get_files -of_objects [get_fileset sources_1] $iploc/axi_to_axilite.xci]
+
+create_ip -name axi_gpio -vendor xilinx.com -library ip -module_name axi_gpio_leds
+set_property -dict [list CONFIG.C_GPIO_WIDTH {4} CONFIG.Component_Name {axi_gpio_leds} CONFIG.C_ALL_OUTPUTS {1}] [get_ips axi_gpio_leds]
+set iploc $proj_dir/$_xil_proj_name_.srcs/sources_1/ip/axi_gpio_leds
+generate_target all [get_files $iploc/axi_gpio_leds.xci]
+export_ip_user_files -of_objects [get_files $iploc/axi_gpio_leds.xci] -no_script -sync -force -quiet
+create_ip_run [get_files -of_objects [get_fileset sources_1] $iploc/axi_gpio_leds.xci]
