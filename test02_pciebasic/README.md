@@ -64,10 +64,12 @@ This IP handles the change.
 ## Build Process
 This project was developed in Vivado 2019.2, but will probably work in other versions without too much trouble.
 To reconstitute the project, use the Vivado TCL console to navigate to this directory, then `source ./proj_pciebasic.tcl`.
+Run synthesis, implementation, and generate the bitstream from the GUI. 
 
 ## Trying It Out
+These instructions assume the use of a relatively recent Linux.
 I have my Acorn connected to an old computer of mine, running Lubuntu 20.04.
-If your computer is one that doesn't cut the power when rebooting,
+If your computer is one that doesn't cut power to PCIe when rebooting,
 then I suggest programming the FPGA directly over JTAG, then rebooting the computer.
 (The FPGA stays programmed as long as power is applied. 
 On a cold start, the FPGA has to read its bitstream out of the Flash.)
@@ -97,18 +99,25 @@ Anyway, once your system is up, run `lspci -tv`. This is what I get:
            +-18.2  Advanced Micro Devices, Inc. [AMD] K8 [Athlon64/Opteron] DRAM Controller
            \-18.3  Advanced Micro Devices, Inc. [AMD] K8 [Athlon64/Opteron] Miscellaneous Control
 ```
-See that `Device 1234:abcd`? That means it worked, whew.
+See that `Device 1234:abcd`? That is the Vendor ID and Product ID chosen for this demo.
 This particular format for `lspci` shows the tree structure, which one will
 need to know about when the time comes to access the device.
 
-Now do a `lspci -vvnn`. Sort through the output and find the relevant entry:
+Now do a `sudo lspci -vvnn -d 1234:` to get the details.
 ```
 01:00.0 Memory controller [0580]: Device [1234:abcd]
 	Subsystem: Device [1234:4321]
 	{...}
 	Region 0: Memory at d0000000 (32-bit, non-prefetchable) [size=16K]
+	{...}
+	LnkSta:	Speed 2.5GT/s (downgraded), Width x1 (downgraded)
 ```
-This tells us that despite lacking a driver, the kernel went ahead and mapped BAR0 somewhere.
+I'll just note a few things out of the data dump. 
+The Link Status shows that the PCIe link is operating at gen1, x1.
+This is because I am running on an old computer with only gen1 support, 
+and I'm using one of those x1 PCIe extenders to make the board more accessible.
+
+The "Region 0:" line tells us that despite lacking a driver, the kernel went ahead and mapped BAR0 somewhere.
 To be honest, I don't know why this happens, but it's nice since otherwise you'd probably need a driver.
 
 Now for convenience's sake clone and compile the very useful `pcimem` utility: https://github.com/billfarrow/pcimem
@@ -122,7 +131,6 @@ It was a little confusing since there is a PCIe bridge in there, but eventually 
 Then it should be possible to read the 0th word in the device:
 ```
 lub@lubuntu20:~/pcimem$ sudo ./pcimem /sys/devices/pci0000\:00/0000\:00\:0e.0/0000\:01\:00.0/resource0 0 w
-[sudo] password for lub: 
 /sys/devices/pci0000:00/0000:00:0e.0/0000:01:00.0/resource0 opened.
 Target offset is 0x0, page size is 4096
 mmap(0, 4096, 0x3, 0x1, 3, 0x0)
@@ -131,7 +139,7 @@ PCI Memory mapped to address 0x7fcee4d46000.
 ```
 And then write to it in order to turn on some LEDs:
 ```
-resource0 0 w 5
+lub@lubuntu20:~/pcimem$ sudo ./pcimem /sys/devices/pci0000\:00/0000\:00\:0e.0/0000\:01\:00.0/resource0 0 w 5
 /sys/devices/pci0000:00/0000:00:0e.0/0000:01:00.0/resource0 opened.
 Target offset is 0x0, page size is 4096
 mmap(0, 4096, 0x3, 0x1, 3, 0x0)
