@@ -23,9 +23,23 @@ From the software side, each PCIe device has a configuration space containing se
 information. This includes the Base Address Registers, which define memory 'windows' that
 can be accessed by the host.
 In general we need to rely on the OS to map BARs into address space and provide safe access.
+This often requires a driver but it seems Linux has ways of supporting simple examples.
 
 ### A few words about AXI and IP for the uninitiated
+In the world of FPGA/ASIC design, you may not have the time or inclination to write everything from scratch.
+You may opt to purchase a block that handles say PCIe or USB or MP3 encoding, since somebody's already got one for sale.
+Such a functional block is referred to as an IP (Intellectual Property), and depending on what you pay for it,
+you might get it in full source form, or just as an encrypted netlist that you drop into your design.
 
+Not all IPs cost money upfront; your FPGA vendor provides a suite of them to do many common functions, under the proviso
+that you use them with their software and FPGAs. 
+This design is basically all Xilinx IP, generated through the Vivado toolchain.
+This includes the PCIe core, and all the AXI bus infrastructure.
+
+What is AXI? It's a bus protocol standard that ARM and Xilinx came up with.
+While there are always many standards to choose from, AXI is pretty dominant these days,
+probably because it's freely available from ARM.
+The full AXI4 standard has a bunch of features but for this design we only need the AXI4-lite subset.
 
 ## Structure
 The code provided in this project is largely interconnect; the smarts are all inside Xilinx IP blocks.
@@ -45,7 +59,7 @@ We only care about the M interface that is controlled from the PCIe host side.
 The GPIO peripheral at the end of the line takes a 32 bit data word, so we need to make the interface the right size.
 * AXI Protocol Converter: The GPIO peripheral is not a full AXI IP but instead is the simpler AXI-lite.
 This IP handles the change.
-* AXI GPIO: As mentioned, this is an AXI-lite IP. It's simply configured for 4 bits of output.
+* AXI GPIO: As mentioned, this is an AXI-lite S IP. It's simply configured for 4 bits of output.
 
 ## Build Process
 This project was developed in Vivado 2019.2, but will probably work in other versions without too much trouble.
@@ -54,9 +68,11 @@ To reconstitute the project, use the Vivado TCL console to navigate to this dire
 ## Trying It Out
 I have my Acorn connected to an old computer of mine, running Lubuntu 20.04.
 If your computer is one that doesn't cut the power when rebooting,
-then I suggest programming the FPGA directly, then rebooting.
+then I suggest programming the FPGA directly over JTAG, then rebooting the computer.
+(The FPGA stays programmed as long as power is applied. 
+On a cold start, the FPGA has to read its bitstream out of the Flash.)
 Otherwise you'll have to write the new bitfile to the Flash
-and take your chances as to whether your system enforces the 100ms boot time requirement.
+and take your chances as to whether your system enforces PCIe's 100ms boot time requirement.
 
 Anyway, once your system is up, run `lspci -tv`. This is what I get:
 ```
@@ -93,7 +109,38 @@ Now do a `lspci -vvnn`. Sort through the output and find the relevant entry:
 	Region 0: Memory at d0000000 (32-bit, non-prefetchable) [size=16K]
 ```
 This tells us that despite lacking a driver, the kernel went ahead and mapped BAR0 somewhere.
+To be honest, I don't know why this happens, but it's nice since otherwise you'd probably need a driver.
 
+Now for convenience's sake clone and compile the very useful `pcimem` utility: https://github.com/billfarrow/pcimem
+
+`pcimem` operates on Linux `sysfs` resources. 
+What I did was `ls` my way down `/sys/devices/pci*` until I found the file corresponding to the `lspci` entry.
+For me, this turned out to be `/sys/devices/pci0000:00/0000:00:0e.0/0000:01:00.0`.
+It was a little confusing since there is a PCIe bridge in there, but eventually I figured it out.
+`cat` the Vendor and Device IDs to make sure.
+
+Then it should be possible to read the 0th word in the device:
+```
+lub@lubuntu20:~/pcimem$ sudo ./pcimem /sys/devices/pci0000\:00/0000\:00\:0e.0/0000\:01\:00.0/resource0 0 w
+[sudo] password for lub: 
+/sys/devices/pci0000:00/0000:00:0e.0/0000:01:00.0/resource0 opened.
+Target offset is 0x0, page size is 4096
+mmap(0, 4096, 0x3, 0x1, 3, 0x0)
+PCI Memory mapped to address 0x7fcee4d46000.
+0x0000: 0x00000000
+```
+And then write to it in order to turn on some LEDs:
+```
+resource0 0 w 5
+/sys/devices/pci0000:00/0000:00:0e.0/0000:01:00.0/resource0 opened.
+Target offset is 0x0, page size is 4096
+mmap(0, 4096, 0x3, 0x1, 3, 0x0)
+PCI Memory mapped to address 0x7fb4d6fcb000.
+0x0000: 0x00000001
+Written 0x0005; readback 0x   5
+```
+Well, that sure was a lot of work just to turn on a few lousy LEDs, huh?
+Next up, something more useful, hopefully.
 
 ## Gory Details
 * GT lane order: The Xilinx IPs have a preferred lane order for the gigabit transceivers,
@@ -102,4 +149,8 @@ Unfortunately the Acorn does not use the standard order, probably due to board l
 The workaround employed in this project is to "unmanage" the IP, then go in and do a little surgery
 on the constraints. If anyone has a better method, I'm all ears.
 * Input/Output delay constraints: It's best practice to constrain all your inputs and outputs, 
-but since timing seems a little tight and we've got mostly LEDs, we can ignore these.
+but since timing seems a little tight with the full gen2x4 core and we've got mostly LED IOs, we'll just ignore these.
+* There is only one active address in BAR0: 0x0. 
+I wasn't sure if trying to access any other address would cause problems or hang the system,
+but it seems to be tolerant of the few other addresses I tried.
+* Todo: clean up the AXI stuff to reduce warnings.
