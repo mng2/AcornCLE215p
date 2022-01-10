@@ -1,0 +1,3 @@
+[submodule "ip/neorv32"]
+	path = ip/neorv32
+	url = https://github.com/stnolting/neorv32.git
