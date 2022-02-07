@@ -9,15 +9,12 @@ use UNISIM.VComponents.all;
 entity top is
     Port ( CLK200_P : in STD_LOGIC;
            CLK200_N : in STD_LOGIC;
-           LEDs_N   : out STD_LOGIC_VECTOR (4 downto 1));
+           LEDs_N   : out STD_ULOGIC_VECTOR (4 downto 1));
 end top;
 
 architecture Behavioral of top is
 
     signal clk200   : std_logic;
-    signal count    : integer := 0;
-    signal countslow: unsigned(4 downto 1) := X"0";
-    signal slowflag : std_logic;
     signal clk100   : std_logic;
     signal clkfb    : std_logic;
     signal mmcm_lock: std_logic;
@@ -116,6 +113,6 @@ begin
         gpio_o  => uc_gpio
     );
     
-    LEDs_N <= not std_logic_vector(uc_gpio(3 downto 0));
+    LEDs_N <= not uc_gpio(3 downto 0);
 
 end Behavioral;
