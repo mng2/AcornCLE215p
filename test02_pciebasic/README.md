@@ -64,6 +64,8 @@ This IP handles the change.
 ## Build Process
 This project was developed in Vivado 2019.2, but will probably work in other versions without too much trouble.
 To reconstitute the project, use the Vivado TCL console to navigate to this directory, then `source ./proj_pciebasic.tcl`.
+It may take a few minutes for all the right stuff to appear in the Sources window -- 
+you'll want to see Design Sources, and under that the "topfile" `axi_pcie_example_top`.
 Run synthesis, implementation, and generate the bitstream from the GUI. 
 
 ## Trying It Out
