@@ -258,16 +258,16 @@ module fake_16550A #(
                     nextIntState <= sModemStatus;
             end
             sRxLineStatus:
-                if (LSRread)
+                if (LSRread | ~IER.ELSI)
                     nextIntState <= sIDLE;
             sRxDataAvail:
-                if (RBRread)
+                if (RBRread | ~IER.ERBFI)
                     nextIntState <= sIDLE;
             sTHRE:
-                if (THRwrite)
+                if (THRwrite | ~IER.ETBEI)
                     nextIntState <= sIDLE;
             sModemStatus:
-                if (MSRread)
+                if (MSRread | ~IER.EDSSI)
                     nextIntState <= sIDLE;
         endcase
     end
