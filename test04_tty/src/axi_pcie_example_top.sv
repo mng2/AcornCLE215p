@@ -10,6 +10,8 @@ module axi_pcie_example_top #(
     input           REFCLKn,
     input           PERSTn,
     output          CLKREQn,
+    input           CLK200_P,
+    input           CLK200_N,
     output  [4:1]   LEDn,
     output          M2_LEDn
 );
@@ -117,17 +119,6 @@ module axi_pcie_example_top #(
                     msi_request <= '0;
             end
     end
-    
-    //make a delay thing for loopback
-    //hopefully maps onto BRAM
-    logic [1023:0][8:0] delay  = '0;
-    always_ff @(posedge axi_clk_pcie) begin
-        delay[0] <= {uart_out_valid, uart_out_data};
-        for (int i=1; i<=1023; i=i+1)
-            delay[i] <= delay[i-1];
-        uart_in_valid <= delay[1023][8];
-        uart_in_data <= delay[1023][7:0];
-    end
 
     // reset needs to be held for 16 cycles after things stabilize
     logic [4:0] reset_counter = '0;
@@ -138,6 +129,65 @@ module axi_pcie_example_top #(
             reset_counter <= reset_counter + 1;
     end
     assign sys_resetn = reset_counter[4];
+    
+    ////////////////////// NEORV32 /////////////////////////
+    
+    logic       clk100;
+    logic       rst_neorv32 = '0;
+    logic [7:0] gpio;
+    logic [7:0] brt0_txd_o, brt0_rxd_i;
+    logic       brt0_txd_valid, brt0_rxd_valid;
+    
+    neorv32_bootloader_200 myneorv32
+    (
+        .CLK200_P,
+        .CLK200_N,
+        .rstn_i(        ~rst_neorv32    ),
+        .clk100,
+        .gpio_o(        gpio            ),
+        .brt0_txd_o,
+        .brt0_rxd_i,
+        .brt0_txd_valid,
+        .brt0_rxd_valid
+    );
+    
+    assign LEDn = ~gpio[3:0];
+
+    xpm_cdc_handshake #(
+      .DEST_EXT_HSK(0),
+      .DEST_SYNC_FF(4),
+      .INIT_SYNC_FF(0),
+      .SIM_ASSERT_CHK(0),
+      .SRC_SYNC_FF(4),
+      .WIDTH(8)
+   ) xpm_cdc_neo2pcie (
+      .dest_out(    uart_in_data    ), 
+      .dest_req(    uart_in_valid   ),
+      .dest_ack(    '0              ),
+      .dest_clk(    axi_clk_pcie    ),
+      .src_rcv(                     ),
+      .src_clk(     clk100          ),
+      .src_in(      brt0_txd_o      ),
+      .src_send(    brt0_txd_valid  )
+   );
+   
+    xpm_cdc_handshake #(
+      .DEST_EXT_HSK(0),
+      .DEST_SYNC_FF(4),
+      .INIT_SYNC_FF(0),
+      .SIM_ASSERT_CHK(0),
+      .SRC_SYNC_FF(4),
+      .WIDTH(8)
+   ) xpm_cdc_pcie2neo (
+      .dest_out(    brt0_rxd_i      ), 
+      .dest_req(    brt0_rxd_valid  ),
+      .dest_ack(    '0              ),
+      .dest_clk(    clk100          ),
+      .src_rcv(                     ),
+      .src_clk(     axi_clk_pcie    ),
+      .src_in(      uart_out_data   ),
+      .src_send(    uart_out_valid  )
+   );
 
 endmodule
 

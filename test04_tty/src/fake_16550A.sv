@@ -1,3 +1,26 @@
+/*
+    I call this a fake 16550A since it does not implement the 
+    serializer/deserializer portion of the device. Instead the idea is
+    to connect it bytewise to another UART, bypassing the ser/des on
+    that side as well.
+    
+    Currently this module is recognized as a 16450 by the Linux kernel,
+    meaning that the FIFOs that would make it a 16550A are not yet
+    implemented. I feel my interest flagging so that is left as a TODO.
+    
+    The AXIlite interface is a simple one that can't support back-to-back
+    operations on the R/W channels. There is no need for fully pipelined
+    throughput here.
+    
+    The interrupt implementation at present does not hew exactly to the
+    description in the datasheet. Priority is not implemented in the way
+    described, where higher-priority interrupts will bump lower-priority
+    ones, until frozen by a host read of IIR. Currently any interrupt
+    will stay active until it is serviced or deactivated.
+    
+    Spec used: 1987 National Microcommunications Elements Data Book
+*/
+
 module fake_16550A #(
     parameter MODE_16450        = 1'b1,
     parameter UART_BASE_ADDR    = 32'h0000_0000
@@ -179,18 +202,18 @@ module fake_16550A #(
         end
     end: p_THR
     
-    // clk = 100 MHz
-    // crystal factor = 12 (12.5 for 8 MHz)
-    // oversampling factor = 16
-    // transmission factor = 9
-    // total = 1728
-    logic [26:0]    baud_counter;
+    // how baud selection appears to work
+    // base rate is 115200 ~ 8.680556 us / symbol
+    // use 9 symbols ~ 78.125 us / byte
+    // clk = 100 MHz ~ 10 ns
+    // call it 7812 clocks
+    logic [28:0]    baud_counter;
     always_ff @(posedge clk) begin: p_baud_emulation
         if (rst)
             baud_counter <= '0;
         else begin
             if (baud_emulation_go)
-                baud_counter <= 11'd1728 * {DLM, DLL};
+                baud_counter <= 13'd7812 * {DLM, DLL};
             else if (baud_counter != '0)
                 baud_counter <= baud_counter - 1;
         end
@@ -425,7 +448,7 @@ module fake_16550A #(
     end: p_axi_read
     
     assign axilite.rresp = 2'd0;
-    // use valid-before-ready for read resp
+    // Xilinx seems to use ready-before-valid for read resp
     always_ff @(posedge clk) begin: p_axi_rresp
         if (rst) begin
             axilite.rvalid  <= '0;
