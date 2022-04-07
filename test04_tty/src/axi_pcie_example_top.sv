@@ -153,42 +153,67 @@ module axi_pcie_example_top #(
     
     assign LEDn = ~gpio[3:0];
 
-    xpm_cdc_handshake #(
-      .DEST_EXT_HSK(0),
-      .DEST_SYNC_FF(4),
-      .INIT_SYNC_FF(0),
-      .SIM_ASSERT_CHK(0),
-      .SRC_SYNC_FF(4),
-      .WIDTH(8)
-   ) xpm_cdc_neo2pcie (
+    xpm_cdc_hs_wrap
+    xpm_cdc_neo2pcie (
       .dest_out(    uart_in_data    ), 
       .dest_req(    uart_in_valid   ),
-      .dest_ack(    '0              ),
       .dest_clk(    axi_clk_pcie    ),
-      .src_rcv(                     ),
       .src_clk(     clk100          ),
       .src_in(      brt0_txd_o      ),
       .src_send(    brt0_txd_valid  )
    );
    
+    xpm_cdc_hs_wrap
+    xpm_cdc_pcie2neo (
+      .dest_out(    brt0_rxd_i      ), 
+      .dest_req(    brt0_rxd_valid  ),
+      .dest_clk(    clk100          ),
+      .src_clk(     axi_clk_pcie    ),
+      .src_in(      uart_out_data   ),
+      .src_send(    uart_out_valid  )
+   );
+
+endmodule: axi_pcie_example_top
+
+
+module xpm_cdc_hs_wrap #(
+    parameter WIDTH = 8
+) (
+    input               src_clk,
+    input               src_send,
+    input [WIDTH-1:0]   src_in,
+    output              dest_clk,
+    output              dest_req,
+    output [WIDTH-1:0]  dest_out
+);
+
+    logic   src_rcv;
+    logic   maintain = '0;
+
     xpm_cdc_handshake #(
       .DEST_EXT_HSK(0),
       .DEST_SYNC_FF(4),
       .INIT_SYNC_FF(0),
       .SIM_ASSERT_CHK(0),
       .SRC_SYNC_FF(4),
-      .WIDTH(8)
-   ) xpm_cdc_pcie2neo (
-      .dest_out(    brt0_rxd_i      ), 
-      .dest_req(    brt0_rxd_valid  ),
-      .dest_ack(    '0              ),
-      .dest_clk(    clk100          ),
-      .src_rcv(                     ),
-      .src_clk(     axi_clk_pcie    ),
-      .src_in(      uart_out_data   ),
-      .src_send(    uart_out_valid  )
-   );
+      .WIDTH(WIDTH)
+    ) xpm_cdc_hs_inst (
+      .dest_out, 
+      .dest_req,
+      .dest_ack( '0 ),
+      .dest_clk,
+      .src_rcv,
+      .src_clk,
+      .src_in,
+      .src_send( src_send | maintain )
+    );
+   
+    // need to keep send high until handshake comes back from the other side
+    always_ff @(posedge src_clk) begin
+        if (src_send)
+            maintain <= '1;
+        else if (src_rcv)
+            maintain <= '0;
+    end
 
-endmodule
-
-
+endmodule: xpm_cdc_hs_wrap

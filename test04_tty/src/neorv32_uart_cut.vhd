@@ -416,7 +416,6 @@ begin
 
           when S_TX_TRANSMIT => -- transmit data
           -- ------------------------------------------------------------
-            txd_valid <= '0';
             if (uart_clk = '1') then
               if (or_reduce_f(tx_engine.baud_cnt) = '0') then -- bit done?
                 tx_engine.baud_cnt <= ctrl(ctrl_baud11_c downto ctrl_baud00_c);
@@ -445,7 +444,7 @@ begin
     end if;
   end process uart_tx_engine;
   
-  byte_txd_o <= tx_engine.sreg(7 downto 0);
+  byte_txd_o <= tx_engine.sreg(8 downto 1);
 
   -- transmitter busy --
   tx_engine.busy <= '0' when (tx_engine.state = S_TX_IDLE) else '1';
