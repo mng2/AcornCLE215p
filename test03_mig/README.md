@@ -144,15 +144,7 @@ But anyway, for serious data transfer, you'd want a DMA core in the FPGA,
 so you could transfer data with limited CPU intervention.
 
 ## Gory Details
-* As discussed in Example 02, the PCIe lane $ sudo ./e /sys/devices/pci0000\:00/0000\:00\:0e.0/0000\:01\:00.0/resource0 0
-[sudo] password for lub: 
-Will write memory to all '0's...
-/sys/devices/pci0000:00/0000:00:0e.0/0000:01:00.0/resource0 opened.
-Target offset is 0, sys page size is 4096
-mmap(0, 536870912, 0x3, 0x1, 3, 0x0)
-PCI Memory mapped to address 0x7fe522426000.
-Wrote 536870912 bytes in 7.652 seconds (0.065 GB/s)
-Read 536870912 bytes in 235.006 seconds (0.002 GB/s)order is treated specially,
+* As discussed in Example 02, the PCIe lane order is treated specially,
 which requires unmanaging the IP and doing some surgery.
 * Input/Output delay constraints: It's best practice to constrain all your inputs and outputs, 
 but since timing seems a little tight with the full gen2x4 core and we've got mostly LED IOs, we'll just ignore these.
